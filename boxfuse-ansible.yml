@@ -1,55 +1,67 @@
 ---
-- name: Install Maven
-  hosts: staging
-  become: yes
-
+- hosts: staging
+  gather_facts: no
   tasks:
-  - name: Ensure OpenJDK and Maven is present
-    apt:
-     name: default-jdk maven
-     update_cache: yes
-     state: present
+    - name: Install Docker, python3-pip, openJDK and git on the staging machine
+      become: true
+      apt:
+        pkg:
+          - docker.io
+          - python3-pip
+          - default-jdk
+          - git
+        state: latest
+        update_cache: true
 
-- name: Install Tomcat
-  hosts: production
-  become: yes
+    - name: Install docker-compose on the staging machine
+      get_url:
+        url:  https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64
+        dest: /bin/docker-compose
+        mode: 'u+x,g+x'
 
-  tasks:
-  - name: Ensure tomcat is present
-    apt:
-     name: tomcat9
-     update_cache: yes
-     state: present
+    - name: Install Docker Module for Python on the staging machine
+      pip:
+        name: docker
 
-  - name: Ensure tomcat service is running
-    service:
-     name: tomcat9
-     state: started
+    - name: Git Clone repository Boxfuse on the staging machine
+      git:
+        repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello
+        clone: yes
+        dest: /tmp/boxfuse-sample-java-war-hello
 
-- name: Build java application
-  hosts: staging
-  become: yes
+            - name: Start docker service on the staging machine
+      service:
+        name: docker
+        state: started
+        enabled: true
 
-  tasks:
-  - name: Get java application
-    git:
-     repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello
-     clone: yes
-     dest: /tmp/boxfuse-sample-java-war-hello
+    - name: create build directory on the staging machine
+      file:
+        path: "{{ playbook_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
 
-  - name: Build procces java application
-    shell: mvn package
-    args:
-      chdir: /tmp/boxfuse-sample-java-war-hello
+    - name: Copy configuration files Docker on the staging machine
+      copy:
+        src: '{{ item }}'
+        dest: "{{ playbook_dir }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - Dockerfile
+        - docker-compose.yml
 
-- name: Copy artefact to production server
-  hosts: production
-  become: yes
+    - name: Start container using docker-compose on the staging machine
+      become: true
+      shell:
+        cmd: "docker-compose up -d"
+      args:
+        chdir: "{{ playbook_dir }}"
 
-  tasks:
-
-  - name: Copy war file to production server
-    synchronize:
-     src: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
-     dest: /var/lib/tomcat9/webapps/hello-1.0.war
-    delegate_to: host2
+    - name: Remove the build directory on the staging machine
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}"
+        state: absent
