@@ -4,6 +4,13 @@
   become: yes
 
   tasks:
+    - name: Install openJDK on the Production machine
+      become: true
+      apt:
+        pkg:
+          - default-jdk
+        state: latest
+        update_cache: true
     - name: Create a workind directory on the Production machine
       file:
         path: "{{ playbook_dir }}"
@@ -46,6 +53,6 @@
   tasks:
     - name: Transfer war-file from staging to production server
       synchronize:
-        src: "/var/lib/docker/volumes/project_web_data/_data/hello-1.0.war"
+        src: "/var/lib/docker/volumes/ansible_boxfuse_web_data/_data/hello-1.0.war"
         dest: "/opt/tomcat/webapps/"
-      delegate_to: staging
+      delegate_to: "158.160.125.76"
