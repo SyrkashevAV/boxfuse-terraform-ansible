@@ -1,0 +1,32 @@
+---
+# tasks file for build
+- name: add docker file
+  copy:
+    src: Dockerfile
+    dest: /tmp
+
+- name: install packages
+  apt:
+    pkg:
+      - docker.io
+      - python3-pip
+    update_cache: yes
+    state: present
+
+- name: pip install docker
+  pip:
+    name: docker
+
+- name: auth dockerhub
+  community.docker.docker_login:
+    username: syrkashevav
+    password: "{{ password_docker }}"
+
+- name: Build docker image
+  community.docker.docker_image:
+    build:
+      path: /tmp
+    name: workdir
+    repository: syrkashevav/build
+    push: yes
+    source: build
