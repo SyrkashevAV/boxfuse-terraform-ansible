@@ -1,5 +1,0 @@
----
-- name: Playbook from Maven
-  import_playbook: build-maven.yml
-- name: Playbook from Tomcat
-  import_playbook: build-tomcat.yml
